@@ -7,7 +7,15 @@ server=$1
 master=$2
 #exclude="1,2,2097152251,2010,3070,3080,8888,3100,1510,3101"
 
-pg_dump -U postgres -h $layer_server $master | gzip -c > $folder/${master}.dump.gz
+pg_dump -U postgres -h $server $master > $folder/${master}.dump
+
+if [ ! -s "$folder/${master}.dump" ]
+then
+    echo "Dump failed"
+    exit 1
+fi
+
+gzip -f $folder/${master}.dump
 
 tmpfile=$(mktemp /tmp/master.XXXXXX)
 
@@ -26,19 +34,17 @@ do
     if [[ "$layer_type" = "POSTGRESQL" ]];
     then
        echo "dump $layer_signature {$layer_server/$layer_name}"
-       dbtmp=$(mktemp /tmp/$layer_signature.XXXXXX)
        set +e
-       pg_dump -U postgres -h $layer_server $layer_name | gzip -c > $dbtmp
-       if [ $? -eq 0 ]; then
-#          echo OK
-          mv $dbtmp $folder/$layer_signature.dump.gz
+       pg_dump -U postgres -h $layer_server $layer_name > $folder/$layer_signature.dump
+       set -e
+       if [ -s $folder/$layer_signature.dump ]; then
+          gzip -f $folder/$layer_signature.dump
           ms=`date +%s000`
           echo "UPDATE aspc_virtualdb SET backup_ms=${ms} WHERE id=${layer_id}" |psql -U postgres -h $server $master
        else
           echo "FAILED: $layer_signature" 
-          rm $dbtmp
+          rm $folder/$layer_signature.dump
        fi
-       set -e
     fi
 done < $tmpfile
 
