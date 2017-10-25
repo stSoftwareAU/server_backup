@@ -5,6 +5,7 @@ mkdir -p $folder
 
 server=$1
 master=$2
+user=`whoami`
 #exclude="1,2,2097152251,2010,3070,3080,8888,3100,1510,3101"
 
 pg_dump -U postgres -h $server $master > $folder/${master}.dump
@@ -22,6 +23,30 @@ tmpfile=$(mktemp /tmp/master.XXXXXX)
 
 sql="select id,signature,serverurl,name,connecttype from aspc_dns, aspc_virtualdb where aspc_dns.databaseid=aspc_virtualdb.id order by id"
 echo "$sql" |psql -U postgres -h $server $master > $tmpfile
+
+today=`date +%a`
+
+function sendToS3() {
+    file=$1
+    to=$2
+    if [ "${s3}" != false ]; then
+
+        S3TOOLS="./s3-tools"
+        S3PutScript="${S3TOOLS}/putS3.sh"
+
+        if [ ! -d "${S3TOOLS}" ]; then
+            git clone https://github.com/stSoftwareAU/s3-tools.git
+        fi
+
+        set +e
+        $S3PutScript $file $to
+        RESULT=$?
+        set -e
+        if [ ! $RESULT -eq 0 ]; then
+            echo "failed to send $file"
+        fi
+    fi
+}
 
 while read line
 do
@@ -41,6 +66,10 @@ do
           gzip -f $folder/$layer_signature.dump
           ms=`date +%s000`
           echo "UPDATE aspc_virtualdb SET backup_ms=${ms} WHERE id=${layer_id}" |psql -U postgres -h $server $master
+          
+          toname="$user/$server/$today/$layer_signature.dump.gz"
+          echo "sending $folder/$layer_signature.dump.gz to s3 $toname"
+          sendToS3 $folder/$layer_signature.dump.gz $toname
        else
           echo "FAILED: $layer_signature" 
           rm $folder/$layer_signature.dump
@@ -49,4 +78,3 @@ do
 done < $tmpfile
 
 rm $tmpfile
-
