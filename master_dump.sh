@@ -5,6 +5,7 @@ mkdir -p $folder
 
 server=$1
 master=$2
+host=$3
 user=`whoami`
 #exclude="1,2,2097152251,2010,3070,3080,8888,3100,1510,3101"
 
@@ -67,7 +68,7 @@ do
           ms=`date +%s000`
           echo "UPDATE aspc_virtualdb SET backup_ms=${ms} WHERE id=${layer_id}" |psql -U postgres -h $server $master
           
-          toname="$user/$server/$today/$layer_signature.dump.gz"
+          toname="$user/$host/$today/$layer_signature.dump.gz"
           echo "sending $folder/$layer_signature.dump.gz to s3 $toname"
           sendToS3 $folder/$layer_signature.dump.gz $toname
        else
