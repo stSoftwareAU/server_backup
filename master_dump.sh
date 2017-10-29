@@ -6,6 +6,13 @@ mkdir -p $folder
 server=$1
 master=$2
 host=$3
+
+if [ -z $host ]; then
+    echo "Please set db server, master db and host parameters. eg:"
+    echo "./master_dump.sh www3 aspc_master www4"
+    exit 1
+fi
+
 user=`whoami`
 #exclude="1,2,2097152251,2010,3070,3080,8888,3100,1510,3101"
 
