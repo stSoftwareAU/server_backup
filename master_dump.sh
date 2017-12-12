@@ -5,12 +5,17 @@ mkdir -p $folder
 
 server=$1
 master=$2
-host=$3
+host=`hostname`
 
 if [ -z $host ]; then
-    echo "Please set db server, master db and host parameters. eg:"
-    echo "./master_dump.sh www3 aspc_master www4"
-    exit 1
+    host=ded1858
+fi
+
+if [ $host = 'ded1858' ]; then
+    host=www3
+fi
+if [ $host = 'ded1934' ]; then
+    host=www4
 fi
 
 user=`whoami`
